@@ -7,7 +7,10 @@ import requests
 import queue
 
 WARNING_TYPES = {
-    'Flash Flood Warning'
+    'Flash Flood Warning',
+    'Severe Thunderstorm Warning',
+    'Tornado Warning',
+    'Special Weather Statement'
         }
 
 class Ack(Thread):
@@ -46,7 +49,7 @@ class Request(Thread):
         self.error_led = LED(16)
 
     def run(self):
-        STATE_CODE = "AZ"
+        STATE_CODE = "CA"
 
         while True:
             try:

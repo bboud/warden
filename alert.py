@@ -10,6 +10,8 @@ class AlertController(Thread):
 
         self.flood_led = PWMLED(27)
         self.thunder_led = PWMLED(17)
+        self.tornado_led = PWMLED(22)
+        self.sws_led = PWMLED(18)
 
         self.alert_queue = {}
 
@@ -23,6 +25,13 @@ class AlertController(Thread):
                 if messageType == 'Cancel': led.off()
             elif 'Watch' in event:
                 led.blink(on_time=1, off_time=5)
+            elif 'Special' in event:
+                if messageType == 'Update' or messageType == 'Alert': led.blink(on_time=0.2, off_time=0.2)
+                sleep(2)
+                led.pulse()
+
+                if messageType == 'Cancel': led.off()
+
 
     def run(self):
         while True:
@@ -34,3 +43,5 @@ class AlertController(Thread):
 
             self.update_led('Flood', event, messageType, self.flood_led)
             self.update_led('Thunder', event, messageType, self.thunder_led)
+            self.update_led('Tornado', event, messageType, self.tornado_led)
+            self.update_led('Special', event, messageType, self.sws_led)
