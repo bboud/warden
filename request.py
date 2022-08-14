@@ -1,5 +1,5 @@
 from threading import Thread
-from gpiozero import PWMLED, Button, GPIOPinInUse
+from gpiozero import PWMLED, Button, GPIOPinInUse, LED
 from requests import get, Timeout
 from time import sleep
 from collections import deque
@@ -22,6 +22,7 @@ class Ack(Thread):
         self.ack_button.wait_for_press()
         self.ack_led.off()
 
+        #Closing too close to the off call might cause segfaulting
         sleep(1)
 
         # Make sure these are no longer in use
@@ -42,6 +43,8 @@ class Request(Thread):
         self.id_graveyard = []
         self.threads = []
 
+        self.error_led = LED(16)
+
     def run(self):
         STATE_CODE = "AZ"
 
@@ -56,11 +59,13 @@ class Request(Thread):
             except requests.Timeout as e:
                 print(e)
                 print('API is timing out! Sleeping for 30 seconds.')
+                self.error_led.blink(n=15)
                 sleep(30)
                 continue
             except requests.ConnectionError as e:
                 print(e)
                 print('Network connection error. Please check network connection. Sleeping for 30 seconds.')
+                self.error_led.blink(n=15)
                 sleep(30)
                 continue
 
