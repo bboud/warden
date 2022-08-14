@@ -6,6 +6,10 @@ from collections import deque
 import requests
 import queue
 
+WARNING_TYPES = {
+    'Flash Flood Warning'
+        }
+
 class Ack(Thread):
     def __init__(self, ackq):
         super().__init__()
@@ -14,27 +18,25 @@ class Ack(Thread):
         self.ackq = ackq
 
     def run(self):
-        try:
-            self.ack_led.pulse()
-            self.ack_button.wait_for_press()
-            self.ack_led.off()
-        except GPIOPinInUse as e:
-            print(e)
-            print('GPIO ACK Pin in use!')
+        self.ack_led.pulse()
+        self.ack_button.wait_for_press()
+        self.ack_led.off()
+
+        sleep(1)
 
         # Make sure these are no longer in use
         self.ack_led.close()
         self.ack_button.close()
         
         # Return to default state
-        self.ackq.append(False)
+        self.ackq.put(False)
 
 class Request(Thread):
     def __init__(self, alert_controller_queue):
         super().__init__()
 
         self.acq = alert_controller_queue
-        self.ackq = deque()
+        self.ackq = queue.Queue()
         self.acked = False
 
         self.id_graveyard = []
@@ -45,9 +47,9 @@ class Request(Thread):
 
         while True:
             try:
-                self.acked = self.ackq.pop()
-            except:
-                print('Queue is empty')
+                self.acked = self.ackq.get_nowait()
+            except queue.Empty:
+                pass
 
             try:
                 req = get(f'https://api.weather.gov/alerts/active?area={STATE_CODE}')
@@ -77,9 +79,15 @@ class Request(Thread):
             for feature in buffer['features']:
                 if feature['id'] in self.id_graveyard: continue
 
+                event = feature['properties']['event']
+
+                if not event in WARNING_TYPES: continue
+
                 self.id_graveyard.append(feature['id'])
 
-                print(feature['properties']['event'])
+                print(event)
+
+                self.acq.put(feature)
 
                 try:
                     if not self.acked:
