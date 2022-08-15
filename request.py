@@ -1,6 +1,5 @@
 from threading import Thread
 from gpiozero import PWMLED, Button, GPIOPinInUse, LED
-from requests import get, Timeout
 from time import sleep
 from collections import deque
 import requests
@@ -29,7 +28,7 @@ class Request(Thread):
 
         while True:
             try:
-                req = get(f'https://api.weather.gov/alerts/active?area={STATE_CODE}')
+                req = requests.get(f'https://api.weather.gov/alerts/active?area={STATE_CODE}')
             except requests.Timeout as e:
                 print(e)
                 print('API is timing out! Sleeping for 30 seconds.')
