@@ -13,50 +13,21 @@ WARNING_TYPES = {
     'Special Weather Statement'
         }
 
-class Ack(Thread):
-    def __init__(self, ackq):
-        super().__init__()
-        self.ack_led = PWMLED(21)
-        self.ack_button = Button(20)
-        self.ackq = ackq
-
-    def run(self):
-        self.ack_led.pulse()
-        self.ack_button.wait_for_press()
-        self.ack_led.off()
-
-        #Closing too close to the off call might cause segfaulting
-        sleep(1)
-
-        # Make sure these are no longer in use
-        self.ack_led.close()
-        self.ack_button.close()
-        
-        # Return to default state
-        self.ackq.put(False)
-
 class Request(Thread):
     def __init__(self, alert_controller_queue):
         super().__init__()
 
-        self.acq = alert_controller_queue
-        self.ackq = queue.Queue()
-        self.acked = False
-
         self.id_graveyard = []
         self.threads = []
+
+        self.acq = alert_controller_queue
 
         self.error_led = LED(16)
 
     def run(self):
-        STATE_CODE = "CA"
+        STATE_CODE = "TX"
 
         while True:
-            try:
-                self.acked = self.ackq.get_nowait()
-            except queue.Empty:
-                pass
-
             try:
                 req = get(f'https://api.weather.gov/alerts/active?area={STATE_CODE}')
             except requests.Timeout as e:
@@ -93,17 +64,8 @@ class Request(Thread):
 
                 self.id_graveyard.append(feature['id'])
 
-                print(event)
+                self.acq.put(('alert', feature))
 
-                self.acq.put(feature)
-
-                try:
-                    if not self.acked:
-                        self.acked = True
-                        self.threads.append(Ack(self.ackq).start())
-                except RuntimeError as e:
-                    print(e)
-                    continue
             sleep(10)
         for t in self.threads:
             t.join()
