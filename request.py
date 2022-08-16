@@ -16,7 +16,7 @@ class Request(Thread):
     def __init__(self, alert_controller_queue):
         super().__init__()
 
-        self.id_graveyard = []
+        self.graveyard = {}
         self.threads = []
 
         self.acq = alert_controller_queue
@@ -24,7 +24,7 @@ class Request(Thread):
         self.error_led = LED(16)
 
     def run(self):
-        STATE_CODE = "TX"
+        STATE_CODE = "AL"
 
         while True:
             try:
@@ -54,16 +54,28 @@ class Request(Thread):
                 sleep(10)
                 continue
 
-            for feature in buffer['features']:
-                if feature['id'] in self.id_graveyard: continue
+            buffer_ids = {}
 
+            # Pass all the new features along:
+            for feature in buffer['features']:
                 event = feature['properties']['event']
 
                 if not event in WARNING_TYPES: continue
+                
+                buffer_ids[feature['id']] = feature
 
-                self.id_graveyard.append(feature['id'])
+                if feature['id'] in self.graveyard: continue
 
-                self.acq.put(('alert', feature))
+                self.graveyard[feature['id']] = feature
+
+                self.acq.put(feature) 
+
+            for isg in self.graveyard:
+                if isg not in buffer_ids:
+                    print(f'Expiring {isg}')
+                    to_expire = self.graveyard[isg]
+                    to_expire['properties']['messageType'] = 'Expire'
+                    self.acq.put(to_expire)
 
             sleep(10)
         for t in self.threads:

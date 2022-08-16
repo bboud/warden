@@ -39,15 +39,12 @@ class LEDController(Thread):
     def run(self):
         while True:
             update = self.lcq.get()
-            print('Getting')
             if update[0] == 'ack':
-                #self.ack_thread.join()
                 self.ack_thread = None
                 for led in self.led_map.values():
                     led[2] = True
 
             elif update[0] == 'push':
-                print('pushed')
                 event = update[1]
                 # Ack starting control depends on the pin being bound.
                 self.ack_thread = Thread(target=listen_for_ack, args=(self.lcq, event,)).start()
@@ -55,6 +52,7 @@ class LEDController(Thread):
                 self.led_map[event][0] += 1
 
             elif update[0] == 'pop':
+                event = update[1]
                 if self.led_map[event][0] >= 0: continue
                 self.led_map[event][0] -= 1
 
@@ -70,4 +68,3 @@ class LEDController(Thread):
                         led_obj.on()
                     else:
                         led_obj.off()
-
