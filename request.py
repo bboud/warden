@@ -24,7 +24,7 @@ class Request(Thread):
         self.led_controller = LEDController(self.lcq).start()
 
     def run(self):
-        STATE_CODE = "OK"
+        STATE_CODE = "LA"
 
         while True:
             try:
@@ -71,7 +71,8 @@ class Request(Thread):
 
                 print(message)
 
-                if message == 'Alert':
+                # Need to add for update alerts on startup
+                if message == 'Alert' or message == 'Update':
                     print(f'Signal to push {event}')
                     self.lcq.put( ('push', event) )
 
