@@ -61,9 +61,9 @@ class LEDController(Thread):
                 event = update[1]
                 count = self.led_map[event][0]
 
-                if count < 0: continue
-                self.led_map[event][0] -= 1
-                print(f'{event} {self.led_map[event][0]}')
+                if count > 0:
+                    self.led_map[event][0] -= 1
+                    print(f'{event} {self.led_map[event][0]}')
 
             for led in self.led_map.values():
                 count = led[0]
@@ -71,7 +71,10 @@ class LEDController(Thread):
                 acked = led[2]
 
                 if not acked:
-                    led_obj.blink(on_time=0.2, off_time=0.2)
+                    if count > 0:
+                        led_obj.blink(on_time=0.2, off_time=0.2)
+                    else:
+                        led_obj.off()
                 else:
                     if count > 0:
                         led_obj.on()
