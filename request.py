@@ -1,9 +1,9 @@
 from threading import Thread
 from gpiozero import PWMLED, Button, GPIOPinInUse, LED
 from time import sleep
-from collections import deque
+from led_controller import LEDController
+from queue import Queue
 import requests
-import queue
 
 WARNING_TYPES = {
     'Flash Flood Warning',
@@ -13,21 +13,22 @@ WARNING_TYPES = {
         }
 
 class Request(Thread):
-    def __init__(self, alert_controller_queue):
+    def __init__(self):
         super().__init__()
 
         self.graveyard = {}
-        self.threads = []
-
-        self.acq = alert_controller_queue
 
         self.error_led = LED(16)
 
+        self.lcq = Queue()
+        self.led_controller = LEDController(self.lcq).start()
+
     def run(self):
-        STATE_CODE = "AL"
+        STATE_CODE = "MS"
 
         while True:
             try:
+                print('Requesting')
                 req = requests.get(f'https://api.weather.gov/alerts/active?area={STATE_CODE}')
             except requests.Timeout as e:
                 print(e)
@@ -59,6 +60,7 @@ class Request(Thread):
             # Pass all the new features along:
             for feature in buffer['features']:
                 event = feature['properties']['event']
+                message = feature['properties']['messageType']
 
                 if not event in WARNING_TYPES: continue
                 
@@ -68,15 +70,22 @@ class Request(Thread):
 
                 self.graveyard[feature['id']] = feature
 
-                self.acq.put(feature) 
+                print(message)
+
+                if message == 'Alert':
+                    print(f'Signal to push {event}')
+                    self.lcq.put( ('push', event) )
+
+            who_to_delete = []
 
             for isg in self.graveyard:
                 if isg not in buffer_ids:
                     print(f'Expiring {isg}')
                     to_expire = self.graveyard[isg]
                     to_expire['properties']['messageType'] = 'Expire'
-                    self.acq.put(to_expire)
+                    self.lcq.put( ( 'pop', isg ) )
+                    who_to_delete.append(isg)
+            for item in who_to_delete:
+                del self.graveyard[item]
 
             sleep(10)
-        for t in self.threads:
-            t.join()
