@@ -24,11 +24,10 @@ class Request(Thread):
         self.led_controller = LEDController(self.lcq).start()
 
     def run(self):
-        STATE_CODE = "MS"
+        STATE_CODE = "OK"
 
         while True:
             try:
-                print('Requesting')
                 req = requests.get(f'https://api.weather.gov/alerts/active?area={STATE_CODE}')
             except requests.Timeout as e:
                 print(e)
@@ -78,13 +77,11 @@ class Request(Thread):
 
             who_to_delete = []
 
-            for isg in self.graveyard:
-                if isg not in buffer_ids:
-                    print(f'Expiring {isg}')
-                    to_expire = self.graveyard[isg]
-                    to_expire['properties']['messageType'] = 'Expire'
-                    self.lcq.put( ( 'pop', isg ) )
-                    who_to_delete.append(isg)
+            for k, v in self.graveyard.items():
+                if k not in buffer_ids:
+                    print(f'Expiring {k}')
+                    self.lcq.put( ( 'pop', v['properties']['event'] ) )
+                    who_to_delete.append(k)
             for item in who_to_delete:
                 del self.graveyard[item]
 

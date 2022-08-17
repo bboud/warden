@@ -61,7 +61,7 @@ class LEDController(Thread):
                 event = update[1]
                 count = self.led_map[event][0]
 
-                if count >= 0: continue
+                if count <= 0: continue
                 self.led_map[event][0] -= 1
                 print(self.led_map[event][0])
 
