@@ -24,7 +24,7 @@ class Request(Thread):
         self.led_controller = LEDController(self.lcq).start()
 
     def run(self):
-        STATE_CODE = "LA"
+        STATE_CODE = "AZ"
 
         while True:
             try:
@@ -83,6 +83,7 @@ class Request(Thread):
                     print(f'Expiring {k}')
                     self.lcq.put( ( 'pop', v['properties']['event'] ) )
                     who_to_delete.append(k)
+                    print(self.graveyard)
             for item in who_to_delete:
                 del self.graveyard[item]
 

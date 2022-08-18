@@ -54,7 +54,7 @@ class LEDController(Thread):
 
                 self.led_map[event][2] = False
                 self.led_map[event][0] += 1
-                print(self.led_map[event][0])
+                print(f' {event} {self.led_map[event][0]}')
 
             elif update[0] == 'pop':
                 print('Popping element')
@@ -64,6 +64,9 @@ class LEDController(Thread):
                 if count > 0:
                     self.led_map[event][0] -= 1
                     print(f'{event} {self.led_map[event][0]}')
+            elif update[0] == 'popall':
+                for led in self.led_map.values():
+                    led[0] = 0
 
             for led in self.led_map.values():
                 count = led[0]
